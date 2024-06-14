@@ -2,44 +2,29 @@ const http = require('http')
 
 const express = require('express')
 const cors = require('cors');
-const app = express()
+const app = express();
+const mongoose = require('mongoose');
+
+require('dotenv').config()
+const Note = require('./models/note');
 app.use(express.static('dist'))
 app.use(cors());
 app.use(express.json());
-let notes = [
-    {
-      id: 1,
-      content: "HTML is easy",
-      important: true
-    },
-    {
-      id: 2,
-      content: "Browser can execute only JavaScript",
-      important: false
-    },
-    {
-      id: 3,
-      content: "GET and POST are the most important methods of HTTP protocol",
-      important: true
-    }
-  ]
+
 
 app.get('/', (request, response) => {
   response.send('<h1>Hello Sad World!</h1>')
 })
 
 app.get('/api/notes', (request, response) => {
-  response.json(notes)
+  Note.find({}).then(notes => {
+    response.json(notes)
+  })
 })
-app.get('/api/notes/:id',(request,response)=>{
-    const id = Number(request.params.id);
-    let note = notes.find(note=>note.id === id);
-    if (note) {
-        response.json(note)
-      } else {
-        response.status(404).send(`id is invalid`)
-      }
-
+app.get('/api/notes/:id', (request, response) => {
+  Note.findById(request.params.id).then(note => {
+    response.json(note)
+  })
 })
 
 app.delete('/api/notes/:id', (request, response) => {
@@ -60,23 +45,21 @@ app.delete('/api/notes/:id', (request, response) => {
   app.post('/api/notes', (request, response) => {
     const body = request.body
   
-    if (!body.content) {
-      return response.status(400).json({ 
-        error: 'content missing' 
-      })
+    if (body.content === undefined) {
+      return response.status(400).json({ error: 'content missing' })
     }
   
-    const note = {
+    const note = new Note({
       content: body.content,
-      important: Boolean(body.important) || false,
-      id: generateId(),
-    }
-  
-    notes = notes.concat(note)
-  
-    response.json(note)
+      important: body.important || false,
+    })
+    console.log("important",body.important);
+    console.log("note from server",note);
+    note.save().then(savedNote => {
+      response.json(savedNote)
+    })
   })
-  const PORT = process.env.PORT || 3001
+  const PORT = process.env.PORT;
  
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
