@@ -18,6 +18,9 @@ const errorHandler = (error, request, response, next) => {
     return response.status(400).send({ error: 'malformatted id' })
   } 
 
+  else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
+  }
   next(error)
 }
 const unknownEndpoint = (request, response) => {
@@ -54,7 +57,7 @@ app.put('/api/notes/:id', (request, response, next) => {
     important: body.important,
   }
 
-  Note.findByIdAndUpdate(request.params.id, note, { new: true })
+  Note.findByIdAndUpdate(request.params.id, note, { new: true, runValidators: true, context: 'query' })
     .then(updatedNote => {
       response.json(updatedNote)
     })
@@ -75,7 +78,7 @@ app.delete('/api/notes/:id', (request, response, next) => {
     return maxId + 1
   }
   
-  app.post('/api/notes', (request, response) => {
+  app.post('/api/notes', (request, response,next) => {
     const body = request.body
   
     if (body.content === undefined) {
@@ -90,6 +93,9 @@ app.delete('/api/notes/:id', (request, response, next) => {
     console.log("note from server",note);
     note.save().then(savedNote => {
       response.json(savedNote)
+    })
+    .catch(error=>{
+      next(error);
     })
   })
   const PORT = process.env.PORT;
